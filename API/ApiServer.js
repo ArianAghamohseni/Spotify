@@ -1,8 +1,11 @@
-// Import necessary modules
+// Import necessary modules and models
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const User = require('./models/user');
+const Track = require('./models/track');
+const Artist = require('./models/artist');
+const Album = require('./models/album');
 
 // Create Express app and configure middleware
 const app = express();
@@ -34,6 +37,23 @@ app.post('/api/users', async (req, res) => {
 
     // Return success response with user data
     res.status(201).json({ message: 'Account created successfully', user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error occurred' });
+  }
+});
+
+// Define route for getting user profile data
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    // Extract user ID from the request parameters
+    const { id } = req.params;
+
+    // Find user by ID in the database
+    const user = await User.findById(id);
+
+    // Return success response with user data
+    res.status(200).json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error occurred' });
