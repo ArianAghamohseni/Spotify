@@ -14,14 +14,16 @@ public class ApiClient {
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
 
-            // Step 4: Convert user data to JSON and write to request body
-            String userData = "{ \"name\": \"John Doe\", \"email\": \"johndoe@example.com\", \"password\": \"password123\" }";
+            // Step 4: Create request body
+            String requestBody = "{\"name\":\"John Doe\",\"email\":\"johndoe@example.com\",\"password\":\"password123\"}";
+
+            // Step 5: Write request body to request stream
             OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(userData.getBytes());
-            outputStream.flush();
+            byte[] requestBodyBytes = requestBody.getBytes("UTF-8");
+            outputStream.write(requestBodyBytes);
             outputStream.close();
 
-            // Step 5: Read response
+            // Step 6: Read response
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_CREATED) {
                 InputStream inputStream = connection.getInputStream();
@@ -33,7 +35,7 @@ public class ApiClient {
                 }
                 reader.close();
                 String jsonResponse = response.toString();
-                System.out.println(jsonResponse); // Success - account created
+                System.out.println(jsonResponse); // Success - display account created message and user data
             } else {
                 // Handle error response
             }
