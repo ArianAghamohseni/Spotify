@@ -1,17 +1,18 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class SpotifyDatabase {
+
     private static final String DB_URL = "jdbc:mysql://localhost:3306/spotify";
     private static final String USER = "your_username";
     private static final String PASSWORD = "your_password";
-
+    
     public static void main(String[] args) {
         Connection conn = null;
-        Statement stmt = null;
+        PreparedStatement stmt = null;
         ResultSet rs = null;
 
         try {
@@ -22,13 +23,21 @@ public class SpotifyDatabase {
             System.out.println("Connecting to database...");
             conn = DriverManager.getConnection(DB_URL, USER, PASSWORD);
 
-            // Execute a query
-            System.out.println("Creating statement...");
-            stmt = conn.createStatement();
-            String sql = "SELECT * FROM Users";
-            rs = stmt.executeQuery(sql);
+            // Insert a new user record into the Users table
+            System.out.println("Inserting new user into database...");
+            String sql = "INSERT INTO Users (username, email, password) VALUES (?, ?, ?)";
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, "johndoe");
+            stmt.setString(2, "johndoe@example.com");
+            stmt.setString(3, "password123");
+            stmt.executeUpdate();
 
-            // Extract data from result set
+            // Retrieve user data from the Users table
+            System.out.println("Retrieving user data from database...");
+            sql = "SELECT * FROM Users WHERE email=?";
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, "johndoe@example.com");
+            rs = stmt.executeQuery();
             while (rs.next()) {
                 int id = rs.getInt("user_id");
                 String username = rs.getString("username");
