@@ -18,10 +18,10 @@ mongoose.connect('mongodb://localhost/spotify', { useNewUrlParser: true });
 app.post('/api/users', async (req, res) => {
   try {
     // Extract user data from the request body
-    const { name, email, password } = req.body;
+    const { username, email, password } = req.body;
 
     // Validate user data
-    if (!name || !email || !password) {
+    if (!username || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -32,11 +32,11 @@ app.post('/api/users', async (req, res) => {
     }
 
     // Create new user and save to the database
-    const user = new User({ name, email, password });
+    const user = new User({ username, email, password });
     await user.save();
 
     // Return success response with user data
-    res.status(201).json({ message: 'Account created successfully', user });
+    res.status(201).json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error occurred' });
@@ -54,6 +54,23 @@ app.get('/api/users/:id', async (req, res) => {
 
     // Return success response with user data
     res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error occurred' });
+  }
+});
+
+// Define route for getting user's liked songs
+app.get('/api/users/:id/liked_songs', async (req, res) => {
+  try {
+    // Extract user ID from the request parameters
+    const { id } = req.params;
+
+    // Find user by ID in the database and populate the liked_songs field
+    const user = await User.findById(id).populate('liked_songs');
+
+    // Return success response with user's liked songs
+    res.status(200).json(user.liked_songs);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error occurred' });
