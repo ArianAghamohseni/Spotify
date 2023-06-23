@@ -41,16 +41,41 @@ public class ApiClient {
                 JSONObject jsonObject = new JSONObject(jsonResponse);
                 int userId = jsonObject.getInt("id");
 
-                // Update the request URL to add the user ID to get liked songs
-                String likedSongsUrl = "http://localhost:3000/api/users/" + userId + "/liked_songs";
-                url = new URL(likedSongsUrl);
+                // Download a sample song for the user
+                String fileUrl = "http://example.com/song.mp3";
+                String artist = "Artist Name";
+                String album = "Album Name";
+                String fileName = "song.mp3";
+                String filePath = "/path/to/your/files/" + artist + "/" + album + "/" + fileName;
+
+                try (InputStream in = new URL(fileUrl).openStream();
+                        OutputStream out = new FileOutputStream(filePath)) {
+
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                // Add the song to the user's liked songs
+                url = new URL("http://localhost:3000/api/users/" + userId + "/liked_songs");
                 connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
+                connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
 
-                // Read response for getting liked songs
+                requestBody = "{\"title\":\"" + fileName + "\",\"artist\":\"" + artist + "\",\"album\":\"" + album + "\",\"file_path\":\"" + filePath + "\"}";
+
+                outputStream = connection.getOutputStream();
+                requestBodyBytes = requestBody.getBytes("UTF-8");
+                outputStream.write(requestBodyBytes);
+                outputStream.close();
+
                 responseCode = connection.getResponseCode();
-                if (responseCode == HttpURLConnection.HTTP_OK) {
+                if (responseCode == HttpURLConnection.HTTP_CREATED) {
                     inputStream = connection.getInputStream();
                     reader = new BufferedReader(new InputStreamReader(inputStream));
                     response = new StringBuffer();
@@ -59,10 +84,28 @@ public class ApiClient {
                     }
                     reader.close();
                     jsonResponse = response.toString();
-                    System.out.println(jsonResponse); // Display the user's liked songs
+                    System.out.println(jsonResponse); // Success - display song added message
                 } else {
                     // Handle error response
                 }
+
+                // Play the user's liked song
+                FileInputStream fis = new FileInputStream(filePath);
+                AudioDevice audioDevice = FactoryRegistry.systemRegistry().createAudioDevice();
+                Player player = new Player(fis, audioDevice);
+
+                player.play();
+
+                // Wait for the song to finish playing
+                while (!player.isComplete()) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                player.close();
 
             } else {
                 // Handle error response
@@ -73,6 +116,8 @@ public class ApiClient {
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JavaLayerException e) {
             e.printStackTrace();
         }
     }
