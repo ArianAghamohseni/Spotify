@@ -1,83 +1,113 @@
-// Import necessary modules and models
-const express = require('express');
-const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
-const User = require('./models/user');
-const Track = require('./models/track');
-const Artist = require('./models/artist');
-const Album = require('./models/album');
+const express = require('express')
+const bodyParser = require('body-parser')
+const app = express()
+const port = 3000
 
-// Create Express app and configure middleware
-const app = express();
-app.use(bodyParser.json());
+// Store user data in memory
+let users = []
 
-// Connect to MongoDB database
-mongoose.connect('mongodb://localhost/spotify', { useNewUrlParser: true });
+app.use(bodyParser.json())
 
-// Define route for creating a new user account
-app.post('/api/users', async (req, res) => {
-  try {
-    // Extract user data from the request body
-    const { username, email, password } = req.body;
+// Create user account endpoint
+app.post('/api/users', (req, res) => {
+  let user = req.body
+  user.id = users.length + 1
+  users.push(user)
+  console.log(`Created user with ID ${user.id}`)
+  res.status(201).json(user)
 
-    // Validate user data
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
+  // Download sample song and add to user's liked songs
+  const https = require('https')
+  const fs = require('fs')
+  const artist = 'Artist Name'
+  const album = 'Album Name'
+  const fileName = 'song.mp3'
+  const filePath = '/path/to/your/files/' + artist + '/' + album + '/' + fileName
+  const fileUrl = 'http://example.com/song.mp3'
+
+  const file = fs.createWriteStream(filePath)
+  const request = https.get(fileUrl, function(response) {
+    response.pipe(file)
+    file.on('finish', function() {
+      file.close()
+
+      const song = {
+        title: fileName,
+        artist: artist,
+        album: album,
+        file_path: filePath
+      }
+
+      let userId = user.id
+      let likedSongs = users[userId - 1].liked_songs
+      likedSongs.push(song)
+      console.log(`Added song '${fileName}' to user ${userId}'s liked songs`)
+    })
+  })
+})
+
+// Add a liked song endpoint
+app.post('/api/users/:id/liked_songs', (req, res) => {
+  const userId = parseInt(req.params.id)
+  const song = req.body
+
+  let user = users[userId - 1]
+  if (!user) {
+    res.status(404).send('User not found')
+  } else {
+    let likedSongs = user.liked_songs
+    song.id = likedSongs.length + 1
+    likedSongs.push(song)
+    console.log(`Added song '${song.title}' to user ${userId}'s liked songs`)
+    res.status(201).json(song)
+  }
+})
+
+// Get a user's liked songs endpoint
+app.get('/api/users/:id/liked_songs', (req, res) => {
+  const userId = parseInt(req.params.id)
+
+  let user = users[userId - 1]
+  if (!user) {
+    res.status(404).send('User not found')
+  } else {
+    res.json(user.liked_songs)
+  }
+})
+
+// Play a liked song endpoint
+app.get('/api/songs/:id/play', (req, res) => {
+  const songId = parseInt(req.params.id)
+
+  let song = null
+  for (let user of users) {
+    let likedSongs = user.liked_songs
+    for (let likedSong of likedSongs) {
+      if (likedSong.id === songId) {
+        song = likedSong
+        break
+      }
     }
-
-    // Check if user already exists in the database
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ message: 'Email address is already in use' });
+    if (song) {
+      break
     }
-
-    // Create new user and save to the database
-    const user = new User({ username, email, password });
-    await user.save();
-
-    // Return success response with user data
-    res.status(201).json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error occurred' });
   }
-});
 
-// Define route for getting user profile data
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    // Extract user ID from the request parameters
-    const { id } = req.params;
+  if (!song) {
+    res.status(404).send('Song not found')
+  } else {
+    const filePath = song.file_path
 
-    // Find user by ID in the database
-    const user = await User.findById(id);
+    const { spawn } = require('child_process');
+    const player = spawn('afplay', [filePath]);
 
-    // Return success response with user data
-    res.status(200).json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error occurred' });
+    player.on('close', () => {
+      console.log(`Finished playing ${song.title}`)
+      res.status(200).send(`Finished playing ${song.title}`)
+    })
   }
-});
+})
 
-// Define route for getting user's liked songs
-app.get('/api/users/:id/liked_songs', async (req, res) => {
-  try {
-    // Extract user ID from the request parameters
-    const { id } = req.params;
-
-    // Find user by ID in the database and populate the liked_songs field
-    const user = await User.findById(id).populate('liked_songs');
-
-    // Return success response with user's liked songs
-    res.status(200).json(user.liked_songs);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error occurred' });
-  }
-});
-
-// Start server on port 3000
-app.listen(3000, () => {
-  console.log('Server listening on port 3000');
-});
+app.listen(port, () => {
+  console.log(`Example app listening at http://localhost:${port}`)
+})
