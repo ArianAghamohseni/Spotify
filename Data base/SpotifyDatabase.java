@@ -6,9 +6,9 @@ import java.sql.Statement;
 
 public class SpotifyDatabase {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/spotify";
-    private static final String USER = "your_username";
-    private static final String PASSWORD = "your_password";
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/Spotify";
+    private static final String USER = "root";
+    private static final String PASSWORD = "MITech1404";
 
     public static void main(String[] args) {
         Connection conn = null;
